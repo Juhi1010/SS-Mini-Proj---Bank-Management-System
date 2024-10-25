@@ -579,6 +579,61 @@ int unlock_file(FILE *file) {
     return 0;
 }
 
+// void loan_application(client_info *client) {
+//     char buffer[BUFFER_SIZE];
+//     int loan_amount;
+//     char loan_purpose[BUFFER_SIZE];
+    
+//     recv(client->client_socket, buffer, sizeof(buffer), MSG_DONTWAIT);
+    
+//     snprintf(buffer, sizeof(buffer), "Enter the loan amount: ");
+//     send(client->client_socket, buffer, strlen(buffer), 0);
+    
+//     memset(buffer, 0, sizeof(buffer));
+//     if (recv(client->client_socket, buffer, sizeof(buffer), 0) <= 0) {
+//         printf("Error receiving loan amount from client.\n");
+//         return;
+//     }
+//     loan_amount = atoi(buffer);
+
+//     if (loan_amount <= 0) {
+//         send(client->client_socket, "Invalid loan amount.\n", 21, 0);
+//         return;
+//     }
+    
+//     usleep(100000);  
+    
+//     snprintf(buffer, sizeof(buffer), "Enter the purpose of the loan: ");
+//     send(client->client_socket, buffer, strlen(buffer), 0);
+    
+//     memset(buffer, 0, sizeof(buffer));
+//     if (recv(client->client_socket, buffer, sizeof(buffer), 0) <= 0) {
+//         printf("Error receiving loan purpose from client.\n");
+//         return;
+//     }
+//     strncpy(loan_purpose, buffer, sizeof(loan_purpose) - 1);
+//     loan_purpose[sizeof(loan_purpose) - 1] = '\0';
+    
+//     FILE *loans_file = fopen(LOANS, "a");
+//     if (loans_file == NULL) {
+//         send(client->client_socket, "Error opening loans file.\n", 27, 0);
+//         return;
+//     }
+    
+//     int account_number, balance;
+//     if (get_account_details(client->logged_in_user, &account_number, &balance) == 0) {
+//         send(client->client_socket, "Error retrieving account details.\n", 35, 0);
+//         fclose(loans_file);
+//         return;
+//     }
+    
+//     fprintf(loans_file, "%s %d %d %s %s\n", client->logged_in_user, account_number, loan_amount, loan_purpose, "Reviewing");
+//     fclose(loans_file);
+    
+//     snprintf(buffer, sizeof(buffer), "Loan application submitted successfully for %d.\n", loan_amount);
+//     send(client->client_socket, buffer, strlen(buffer), 0);
+// }
+
 void loan_application(client_info *client) {
     char buffer[BUFFER_SIZE];
     int loan_amount;
@@ -611,9 +666,11 @@ void loan_application(client_info *client) {
         printf("Error receiving loan purpose from client.\n");
         return;
     }
+
     strncpy(loan_purpose, buffer, sizeof(loan_purpose) - 1);
     loan_purpose[sizeof(loan_purpose) - 1] = '\0';
-    
+    loan_purpose[strcspn(loan_purpose, "\n")] = '\0';  
+
     FILE *loans_file = fopen(LOANS, "a");
     if (loans_file == NULL) {
         send(client->client_socket, "Error opening loans file.\n", 27, 0);
@@ -627,12 +684,13 @@ void loan_application(client_info *client) {
         return;
     }
     
-    fprintf(loans_file, "%s %d %d %s\n", client->logged_in_user, account_number, loan_amount, loan_purpose);
+    fprintf(loans_file, "%s %d %d %s %s %s\n", client->logged_in_user, account_number, loan_amount, loan_purpose, "Unassigned", "Reviewing");
     fclose(loans_file);
     
     snprintf(buffer, sizeof(buffer), "Loan application submitted successfully for %d.\n", loan_amount);
     send(client->client_socket, buffer, strlen(buffer), 0);
 }
+
 
 
 

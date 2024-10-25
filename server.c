@@ -42,32 +42,31 @@ void *handle_client(void *arg) {
     const char *filename;
     int authenticated;
 
-    // Determine the file based on role choice
     switch (choice) {
         case 1:
             authenticate(client, CUSTOMERS);
-            authenticated = strlen(client->logged_in_user) > 0; // Check if the user is authenticated
+            authenticated = strlen(client->logged_in_user) > 0; 
             if (authenticated) {
                 handle_customer(client);
             }
             break;
         case 2:
             authenticate(client, EMPLOYEES);
-            authenticated = strlen(client->logged_in_user) > 0; // Check if the user is authenticated
+            authenticated = strlen(client->logged_in_user) > 0; 
             if (authenticated) {
                 handle_employee(client);
             }
             break;
         case 3:
             authenticate(client, MANAGERS);
-            authenticated = strlen(client->logged_in_user) > 0; // Check if the user is authenticated
+            authenticated = strlen(client->logged_in_user) > 0; 
             if (authenticated) {
                 handle_manager(client);
             }
             break;
         case 4:
             authenticate(client, ADMIN);
-            authenticated = strlen(client->logged_in_user) > 0; // Check if the user is authenticated
+            authenticated = strlen(client->logged_in_user) > 0; 
             if (authenticated) {
                 handle_admin(client);
             }
@@ -79,13 +78,10 @@ void *handle_client(void *arg) {
             return NULL;
     }
 
-    // Log out the user if they were authenticated before disconnecting
     if (authenticated) {
         log_out_user(client->logged_in_user);
     }
-    // Further client operations would go here...
 
-    // Close the client socket and free resources
     close(client_socket);
     free(client);
     return NULL;
@@ -95,25 +91,23 @@ void authenticate(client_info *client, const char *filename) {
     char username[50], password[50];
     char buffer[BUFFER_SIZE];
 
-    // Get username from client
     send_message(client->client_socket, "Enter username: ");
-    memset(username, 0, sizeof(username));  // Clear buffer before use
+    memset(username, 0, sizeof(username));  
     int bytes_received = recv(client->client_socket, username, sizeof(username) - 1, 0);
     if (bytes_received <= 0) {
         send_message(client->client_socket, "Error receiving username.\n");
         return;
     }
-    username[strcspn(username, "\n")] = '\0';  // Remove any trailing newline characters
+    username[strcspn(username, "\n")] = '\0';  
 
-    // Get password from client
     send_message(client->client_socket, "Enter password: ");
-    memset(password, 0, sizeof(password));  // Clear buffer before use
+    memset(password, 0, sizeof(password));  
     bytes_received = recv(client->client_socket, password, sizeof(password) - 1, 0);
     if (bytes_received <= 0) {
         send_message(client->client_socket, "Error receiving password.\n");
         return;
     }
-    password[strcspn(password, "\n")] = '\0';  // Remove any trailing newline characters
+    password[strcspn(password, "\n")] = '\0';  
 
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -121,16 +115,14 @@ void authenticate(client_info *client, const char *filename) {
         return;
     }
 
-    // && log_in_user(username)
 
     if (check_credentials(file, username, password) && log_in_user(username)) {
-        // Store the logged-in username for the session
         send_message(client->client_socket, "Authenticated.\n"); 
         strncpy(client->logged_in_user, username, sizeof(client->logged_in_user) - 1);
-        client->logged_in_user[sizeof(client->logged_in_user) - 1] = '\0';  // Ensure null-termination
+        client->logged_in_user[sizeof(client->logged_in_user) - 1] = '\0';  
     } else {
         send_message(client->client_socket, "Invalid credentials.\n");
-        log_out_user(username);  // Ensure any previous login for this user is logged out
+        log_out_user(username); 
     }
 
     fclose(file);
@@ -142,23 +134,19 @@ void handle_customer(client_info *client) {
     int client_socket = client->client_socket;
 
     while (1) {
-        // Get and send the customer menu to the client
         get_customer_menu(menu, sizeof(menu));
         send(client_socket, menu, strlen(menu), 0);
 
-        // Receive the customer's choice
         if (recv(client_socket, &choice, sizeof(choice), 0) <= 0) {
             printf("Client disconnected.\n");
             close(client_socket);
             return;
         }
 
-        printf("Received choice: %d\n", choice); // Debug message
+        printf("Received choice: %d\n", choice); 
 
-        // Process the customer's choice
         process_customer_choice(client, choice);
 
-        // If choice is logout or exit, break the loop
     }
 
     close(client_socket);
@@ -170,23 +158,19 @@ void handle_employee(client_info *client) {
     int client_socket = client->client_socket;
 
     while (1) {
-        // Get and send the customer menu to the client
         get_employee_menu(menu, sizeof(menu));
         send(client_socket, menu, strlen(menu), 0);
 
-        // Receive the customer's choice
         if (recv(client_socket, &choice, sizeof(choice), 0) <= 0) {
             printf("Client disconnected.\n");
             close(client_socket);
             return;
         }
 
-        printf("Received choice: %d\n", choice); // Debug message
+        printf("Received choice: %d\n", choice); 
 
-        // Process the customer's choice
         process_employee_choice(client, choice);
 
-        // If choice is logout or exit, break the loop
     }
 
     close(client_socket);
@@ -198,23 +182,19 @@ void handle_admin(client_info *client) {
     int client_socket = client->client_socket;
 
     while (1) {
-        // Get and send the customer menu to the client
         get_admin_menu(menu, sizeof(menu));
         send(client_socket, menu, strlen(menu), 0);
 
-        // Receive the customer's choice
         if (recv(client_socket, &choice, sizeof(choice), 0) <= 0) {
             printf("Client disconnected.\n");
             close(client_socket);
             return;
         }
 
-        printf("Received choice: %d\n", choice); // Debug message
+        printf("Received choice: %d\n", choice); 
 
-        // Process the customer's choice
         process_admin_choice(client, choice);
 
-        // If choice is logout or exit, break the loop
     }
 
     close(client_socket);
@@ -226,23 +206,19 @@ void handle_manager(client_info *client) {
     int client_socket = client->client_socket;
 
     while (1) {
-        // Get and send the customer menu to the client
         get_manager_menu(menu, sizeof(menu));
         send(client_socket, menu, strlen(menu), 0);
 
-        // Receive the customer's choice
         if (recv(client_socket, &choice, sizeof(choice), 0) <= 0) {
             printf("Client disconnected.\n");
             close(client_socket);
             return;
         }
 
-        printf("Received choice: %d\n", choice); // Debug message
+        printf("Received choice: %d\n", choice); 
 
-        // Process the customer's choice
         process_manager_choice(client, choice);
 
-        // If choice is logout or exit, break the loop
     }
 
     close(client_socket);
@@ -255,10 +231,10 @@ int check_credentials(FILE *file, const char *username, const char *password) {
     while (fgets(line, sizeof(line), file) != NULL) {
         sscanf(line, "%s %s", file_username, file_password);
         if (strcmp(username, file_username) == 0 && strcmp(password, file_password) == 0) {
-            return 1;  // Credentials match
+            return 1;  
         }
     }
-    return 0;  // No match found
+    return 0;  
 }
 
 void send_message(int client_socket, const char *message) {
@@ -271,13 +247,11 @@ int main() {
     int opt = 1;
     int addrlen = sizeof(address);
 
-    // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("Socket failed");
         exit(EXIT_FAILURE);
     }
 
-    // Attaching socket to the port with SO_REUSEADDR only
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -287,13 +261,11 @@ int main() {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
-    // Binding the socket to the address and port
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("Bind failed");
         exit(EXIT_FAILURE);
     }
 
-    // Listen for incoming connections
     if (listen(server_fd, 10) < 0) {
         perror("Listen");
         exit(EXIT_FAILURE);

@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define PORT 8080
+#define PORT 8000
 #define BUFFER_SIZE 1024
 #define MAX_USERNAME 50
 #define MAX_PASSWORD 50
@@ -212,11 +212,9 @@ void handle_customer_operations(int sock, int choice) {
             }
             printf("%s", buffer);
             
-            // Send loan amount
             fgets(loan_amount, sizeof(loan_amount), stdin);
             send(sock, loan_amount, strlen(loan_amount), 0);
             
-            // Receive response (either error or purpose prompt)
             memset(buffer, 0, sizeof(buffer));
             if (recv(sock, buffer, sizeof(buffer), 0) <= 0) {
                 printf("Error receiving server response.\n");
@@ -227,7 +225,6 @@ void handle_customer_operations(int sock, int choice) {
             fgets(loan_purpose, sizeof(loan_purpose), stdin);
             send(sock, loan_purpose, strlen(loan_purpose), 0);
                 
-                // Receive confirmation
             memset(buffer, 0, sizeof(buffer));
             if (recv(sock, buffer, sizeof(buffer), 0) <= 0) {
                 printf("Error receiving loan application confirmation.\n");
@@ -312,7 +309,6 @@ void display_employee_menu(int sock) {
     char buffer[BUFFER_SIZE];
 
     while (1) {
-        // Clear buffer and receive menu from the server
         memset(buffer, 0, BUFFER_SIZE);
         if (recv(sock, buffer, BUFFER_SIZE, 0) <= 0) {
             printf("Error receiving menu from server.\n");
@@ -447,59 +443,51 @@ void handle_employee_operations(int sock, int choice) {
             printf("%s\n", buffer); 
         }
     }
+
     else if (choice == 3) {
         char customer_username[MAX_USERNAME];
-        char decision[10];
+        char decision[2];
+
         recv(sock, buffer, sizeof(buffer) - 1, 0);
-        buffer[strcspn(buffer, "\n")] = '\0'; 
-        printf("%s", buffer); 
-
+        printf("%s", buffer);
         fgets(customer_username, sizeof(customer_username), stdin);
-        customer_username[strcspn(customer_username, "\n")] = '\0'; 
-
         send(sock, customer_username, strlen(customer_username), 0);
 
         recv(sock, buffer, sizeof(buffer) - 1, 0);
-        buffer[strcspn(buffer, "\n")] = '\0';
-        printf("%s", buffer); 
-
+        printf("%s", buffer);
         fgets(decision, sizeof(decision), stdin);
-        decision[strcspn(decision, "\n")] = '\0'; 
-
         send(sock, decision, strlen(decision), 0);
 
-        ssize_t bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';  
-            printf("%s\n", buffer); 
-        } else {
-            perror("Error receiving response from server");
-        }
+        recv(sock, buffer, sizeof(buffer) - 1, 0);
+        printf("%s", buffer);
     }
+
     else if (choice == 4 ) {
         send(sock, "Requesting loan applications...\n", 32, 0);
 
-        while (1) {
-            ssize_t bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-            if (bytes_received <= 0) {
-                perror("Error receiving loan applications");
-                break;
-            }
-
-            buffer[bytes_received] = '\0';  
-            printf("%s", buffer);
-
-            if (strstr(buffer, "End of loan applications.") != NULL) {
-                break;
-            }
+      
+        ssize_t bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_received <= 0) {
+            perror("Error receiving loan applications");
         }
+
+        buffer[bytes_received] = '\0';  
+        printf("%s", buffer);   
+        
+        memset(buffer, 0, sizeof(buffer));
+        if (recv(sock, buffer, sizeof(buffer), 0) <= 0) {
+            printf("Error receiving response from server.\n");
+        } else {
+            printf("%s\n", buffer); 
+        }        
     }
+
     else if (choice == 5) {
         memset(buffer, 0, sizeof(buffer));
         recv(sock, buffer, sizeof(buffer), 0);
         printf("%s", buffer);
-        close(sock); // Close connection
-        exit(0); // Terminate 
+        close(sock); 
+        exit(0); 
     }
 
 }
@@ -537,7 +525,6 @@ void handle_admin_operations(int sock, int choice) {
 
 
     if (choice == 1) { 
-        // if (choice == 1) { // Add new employee
         char new_emp_username[MAX_USERNAME];
         char new_emp_password[MAX_PASSWORD];
 
@@ -589,11 +576,10 @@ void handle_admin_operations(int sock, int choice) {
         memset(buffer, 0, sizeof(buffer));
         recv(sock, buffer, sizeof(buffer), 0);
         printf("%s", buffer);
-        close(sock); // Close the socket connection
-        exit(0); // Terminate the client program 
+        close(sock); 
+        exit(0); 
     }
 
-    // Receive and display the admin menu again
     memset(buffer, 0, BUFFER_SIZE);
     if (recv(sock, buffer, sizeof(buffer), 0) <= 0) {
         printf("Error receiving menu from server.\n");
@@ -682,7 +668,6 @@ void handle_manager_operations(int sock, int choice) {
         }
         printf("%s", buffer);
 
-        // Send the employee username
         fgets(employee_password, sizeof(employee_password), stdin);
         employee_password[strcspn(employee_password, "\n")] = '\0';  
         send(sock, employee_password, strlen(employee_password), 0);

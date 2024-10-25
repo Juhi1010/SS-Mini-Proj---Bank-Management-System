@@ -17,6 +17,6 @@
 #define MAX_USERNAME 50
 #define MAX_PASSWORD 50
 #define BUFFER_SIZE 1024
-#define PORT 8080
+#define PORT 8000
 
 #endif 

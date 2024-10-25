@@ -29,7 +29,6 @@ void process_employee_choice(client_info *client, int choice) {
             process_loans(client);
             break;
         case 5:
-            // change_password(client, EMPLOYEES);
             break;
         default:
             send(client->client_socket, "Invalid choice!\n", 16, 0);
@@ -107,7 +106,7 @@ void add_new_customer(client_info *client) {
         return;
     }
 
-    fprintf(accounts_file, "%d %d %d\n", account_number, 1, 0); // New account with active status (1) and balance 0
+    fprintf(accounts_file, "%d %d %d\n", account_number, 1, 0); 
     fclose(accounts_file);
 
     char success_msg[BUFFER_SIZE];
@@ -156,7 +155,7 @@ void modify_customer_details(client_info *client) {
             if (strlen(buffer) == 1 && (buffer[0] == 'M' || buffer[0] == 'F')) {
                 gender_input = buffer[0];
             } else {
-                gender_input = file_gender; // Keep the existing gender
+                gender_input = file_gender; 
             }
 
             char age_buffer[3];
@@ -164,7 +163,7 @@ void modify_customer_details(client_info *client) {
             recv(client_socket, age_buffer, sizeof(age_buffer), 0);
             int age = atoi(age_buffer);
             if (age == -1) {
-               age = file_age; // Assign the customer's current age
+               age = file_age; 
             }
 
             fprintf(temp_file, "%s %s %c %d %d\n", new_username, file_password, gender_input, age, account_number);
@@ -190,156 +189,101 @@ void modify_customer_details(client_info *client) {
 void process_loans(client_info *client) {
     int client_socket = client->client_socket;
     char employee_username[MAX_USERNAME];
-    char customer_username[MAX_USERNAME];
+    char loan_customer[MAX_USERNAME];
+    char assigned_employee[MAX_USERNAME];
+    char acc_no[5];
+    char loan_amount[10];
+    char loan_type[50];
+    char loan_status[10];
     char buffer[BUFFER_SIZE];
+    int found = 0;
 
     snprintf(employee_username, sizeof(employee_username), "%s", client->logged_in_user);
 
-    FILE *processed_loans_file = fopen(PROCESSEDLOANS, "r");
-    if (processed_loans_file == NULL) {
-        perror("Error opening processed_loans.txt");
+    FILE *loans_file = fopen(LOANS, "r");
+    if (loans_file == NULL) {
+        perror("Error opening loans.txt");
         send(client_socket, "Error accessing loan applications.\n", 36, 0);
         return;
     }
 
     send(client_socket, "Loan applications assigned to you:\n", 35, 0);
-    while (fscanf(processed_loans_file, "%s", customer_username) != EOF) {
-        char assigned_employee[MAX_USERNAME], status[10];
-        fscanf(processed_loans_file, "%s %s", assigned_employee, status);
-        
+
+    while (fscanf(loans_file, "%s %s %s %49s %49s %9s", loan_customer, acc_no, loan_amount, loan_type, assigned_employee, loan_status) != EOF) {
         if (strcmp(assigned_employee, employee_username) == 0) {
-            FILE *loans_file = fopen("loans.txt", "r");
-            if (loans_file == NULL) {
-                perror("Error opening loans.txt");
-                fclose(processed_loans_file);
-                send(client_socket, "Error accessing loans data.\n", 28, 0);
-                return;
-            }
-
-            char loan_customer[MAX_USERNAME], loan_amount[10], loan_type[50], loan_status[10];
-            while (fscanf(loans_file, "%s %s %s %s", loan_customer, loan_amount, loan_type, loan_status) != EOF) {
-                if (strcmp(loan_customer, customer_username) == 0) {
-                    snprintf(buffer, sizeof(buffer), "Customer: %s, Amount: %s, Type: %s, Status: %s\n", loan_customer, loan_amount, loan_type, loan_status);
-                    send(client_socket, buffer, strlen(buffer), 0);
-                }
-            }
-
-            fclose(loans_file);
+            snprintf(buffer, sizeof(buffer), "Customer: %s, Acc_No: %s, Amount: %s, Purpose: %s, Status: %s\n", 
+                     loan_customer, acc_no, loan_amount, loan_type, loan_status);
+            send(client_socket, buffer, strlen(buffer), 0);
+            found = 1;
         }
     }
 
-    fclose(processed_loans_file);
-    send(client_socket, "End of loan applications.\n", 27, 0);
+    fclose(loans_file);
 
+    if (!found) {
+        send(client_socket, "No loan applications assigned to you.\n", 38, 0);
+    } else {
+        send(client_socket, "End of loan applications.\n", 27, 0);
+    }
 }
 
 void approve_reject_loans(client_info *client) {
     int client_socket = client->client_socket;
     char customer_username[MAX_USERNAME];
-    char decision[10];
+    char decision[2];
     char buffer[BUFFER_SIZE];
-    char temp_buffer[BUFFER_SIZE];
 
-    send(client_socket, "Enter the username of the customer: ", 37, 0);
+    send(client_socket, "Enter the username of the customer whose loan is to be processed: ", 65, 0);
     recv(client_socket, customer_username, sizeof(customer_username) - 1, 0);
     customer_username[strcspn(customer_username, "\n")] = '\0';
 
-    send(client_socket, "Do you want to approve or reject the loan? (approve/reject): ", 62, 0);
+    send(client_socket, "Enter 'Y' to approve or 'N' to reject the loan: ", 47, 0);
     recv(client_socket, decision, sizeof(decision) - 1, 0);
     decision[strcspn(decision, "\n")] = '\0';
 
-    FILE *processed_loans_file = fopen("processed_loans.txt", "r+");
-    if (processed_loans_file == NULL) {
-        perror("Error opening processed_loans.txt");
-        send(client_socket, "Error accessing processed loans data.\n", 38, 0);
-        return;
-    }
-
-    FILE *loans_file = fopen("loans.txt", "r+");
+    FILE *loans_file = fopen(LOANS, "r+"); 
     if (loans_file == NULL) {
         perror("Error opening loans.txt");
-        fclose(processed_loans_file);
         send(client_socket, "Error accessing loans data.\n", 28, 0);
-        return;
-    }
-
-    FILE *temp_file = fopen("temp_processed_loans.txt", "w");
-    if (temp_file == NULL) {
-        perror("Error opening temp_processed_loans.txt");
-        fclose(processed_loans_file);
-        fclose(loans_file);
-        send(client_socket, "Error creating temporary file.\n", 31, 0);
         return;
     }
 
     int found = 0;
     char line[BUFFER_SIZE];
+    long line_pos;
 
-    while (fgets(line, sizeof(line), processed_loans_file)) {
-        char loan_customer[MAX_USERNAME], assigned_employee[MAX_USERNAME], status[10];
-        sscanf(line, "%s %s %s", loan_customer, assigned_employee, status);
+    while (fgets(line, sizeof(line), loans_file)) {
+        char loan_customer[MAX_USERNAME], acc_no[10], loan_amount[10], loan_type[50], employee_username[MAX_USERNAME], loan_status[10];
+        
+        sscanf(line, "%s %s %s %s %s %s", loan_customer, acc_no, loan_amount, loan_type, employee_username, loan_status);
 
         if (strcmp(loan_customer, customer_username) == 0) {
             found = 1;
-            if (strcmp(decision, "approve") == 0) {
-                snprintf(temp_buffer, sizeof(temp_buffer), "%s %s %s\n", loan_customer, assigned_employee, "Approved");
+
+            line_pos = ftell(loans_file) - strlen(line);
+            fseek(loans_file, line_pos, SEEK_SET);
+
+            if (strcmp(decision, "Y") == 0) {
+                snprintf(line, sizeof(line), "%s %s %s %s %s Approved\n", loan_customer, acc_no, loan_amount, loan_type, employee_username);
                 send(client_socket, "Loan approved.\n", 15, 0);
-            } else if (strcmp(decision, "reject") == 0) {
-                snprintf(temp_buffer, sizeof(temp_buffer), "%s %s %s\n", loan_customer, assigned_employee, "Rejected");
+            } else if (strcmp(decision, "N") == 0) {
+                snprintf(line, sizeof(line), "%s %s %s %s %s Rejected\n", loan_customer, acc_no, loan_amount, loan_type, employee_username);
                 send(client_socket, "Loan rejected.\n", 16, 0);
             } else {
-                send(client_socket, "Invalid decision. Please use 'approve' or 'reject'.\n", 56, 0);
-                fclose(temp_file);
+                send(client_socket, "Invalid decision. Please use 'Y' or 'N'.\n", 41, 0);
                 fclose(loans_file);
-                fclose(processed_loans_file);
                 return;
             }
-            fprintf(temp_file, "%s", temp_buffer);
-        } else {
-            fprintf(temp_file, "%s", line);
+
+            fprintf(loans_file, "%s", line);
+            fflush(loans_file);  
+            break;
         }
     }
 
-    fclose(temp_file);
     fclose(loans_file);
-    fclose(processed_loans_file);
-
-    remove("processed_loans.txt");
-    rename("temp_processed_loans.txt", "processed_loans.txt");
-
-    temp_file = fopen("temp_loans.txt", "w");
-    if (temp_file == NULL) {
-        perror("Error opening temp_loans.txt");
-        send(client_socket, "Error creating temporary file.\n", 31, 0);
-        return;
-    }
-
-    while (fgets(line, sizeof(line), loans_file)) {
-        char loan_customer[MAX_USERNAME], loan_amount[10], loan_type[50], loan_status[10];
-        sscanf(line, "%s %s %s %s", loan_customer, loan_amount, loan_type, loan_status);
-
-        if (strcmp(loan_customer, customer_username) == 0) {
-            if (strcmp(decision, "approve") == 0) {
-                fprintf(temp_file, "%s %s %s %s\n", loan_customer, loan_amount, loan_type, "Approved");
-            } else {
-                fprintf(temp_file, "%s %s %s %s\n", loan_customer, loan_amount, loan_type, "Rejected");
-            }
-        } else {
-            fprintf(temp_file, "%s", line);
-        }
-    }
-
-    fclose(temp_file);
-    remove("loans.txt");
-    rename("temp_loans.txt", "loans.txt");
 
     if (!found) {
         send(client_socket, "Customer loan not found.\n", 26, 0);
     }
 }
-
-
-
-
-
-
